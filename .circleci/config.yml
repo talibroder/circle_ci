@@ -1,20 +1,64 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: weather
-spec:
-  replicas: 4
-  selector:
-    matchLabels:
-      app: weather
-  template:
-    metadata:
-      labels:
-        app: weather
-    spec:
-      containers:
-        - name: weather
-          image: talibro/weather:latest
-          ports:
-            - containerPort: 5000
-          
+version: 2.1
+
+jobs:
+  build_and_test:
+    docker:
+      - image: python:3.8
+
+    steps:
+      - checkout
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t my-python-weather-app .
+
+      - run:
+          name: Test Docker image
+          command: |
+            docker run my-python-weather-app python -m pytest tests/
+    
+      - run:
+          name: Upload image to GitLab container registry
+          command: |
+            echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+            docker tag my-python-weather-app $CI_REGISTRY_IMAGE:latest
+            docker push $CI_REGISTRY_IMAGE:latest
+
+  create_eks_cluster:
+    docker:
+      - image: hashicorp/terraform:1.0.0
+
+    steps:
+      - checkout
+      - run:
+          name: Check Terraform files with Checkov
+          command: checkov -d terraform/
+
+      - run:
+          name: Terraform Init
+          command: terraform init
+
+      - run:
+          name: Run Teratest
+          command: |
+            go get -u github.com/stretchr/testify/assert
+            go get -u github.com/gruntwork-io/terratest/modules/terraform
+            go test -v terraform/terratest/
+
+workflows:
+  version: 2
+  build_and_deploy:
+    jobs:
+      - build_and_test:
+          filters:
+            branches:
+              only:
+                - main
+      - create_eks_cluster:
+          requires:
+            - build_and_test
+          filters:
+            branches:
+              only:
+                - main
+
