@@ -14,12 +14,12 @@ jobs:
       - checkout
       - run:
          name: Print Project Directory Contents
-         command: ls -al /home/circleci/project
+         command: ls -al /home/circleci/project/.circleci
 
       - run:
           name: Build Docker image
           command: |
-            sudo docker build -t $IMG_NAME .
+            sudo docker build -t $IMG_NAME /.circleci
 
       - run:
           name: Run Docker image and test
