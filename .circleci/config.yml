@@ -5,24 +5,37 @@ jobs:
     docker:
       - image: python:3.8
 
+    environment:
+      IMG_NAME: 'weather'
+      DOCKER_REPO: 'talibro/weather'
+
     steps:
       - checkout
+
       - run:
           name: Build Docker image
           command: |
-            docker build -t my-python-weather-app .
+            sudo docker build -t $IMG_NAME .
 
       - run:
-          name: Test Docker image
+          name: Run Docker image and test
           command: |
-            docker run my-python-weather-app python -m pytest tests/
-    
+            sudo docker run --rm -d -p 80:80 --name weather_app $IMG_NAME
+            python3 --version
+            python3 unitest.py
+
       - run:
-          name: Upload image to GitLab container registry
+          name: Run Tests
           command: |
-            echo "$CI_JOB_TOKEN" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
-            docker tag my-python-weather-app $CI_REGISTRY_IMAGE:latest
-            docker push $CI_REGISTRY_IMAGE:latest
+            pip install selenium
+            python3 selenium_location.py
+
+      - run:
+          name: Push to DockerHub
+          command: |
+            echo "$DOCKER_HUB_PASSWORD" | sudo docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+            sudo docker tag $IMG_NAME $DOCKER_REPO:1.0.0
+            sudo docker push $DOCKER_REPO:1.0.0
 
   create_eks_cluster:
     docker:
@@ -30,6 +43,7 @@ jobs:
 
     steps:
       - checkout
+
       - run:
           name: Check Terraform files with Checkov
           command: checkov -d terraform/
@@ -54,6 +68,7 @@ workflows:
             branches:
               only:
                 - main
+
       - create_eks_cluster:
           requires:
             - build_and_test
