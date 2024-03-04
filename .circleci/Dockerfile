@@ -14,7 +14,7 @@ RUN pip install gunicorn
 
 # Stage 2: Production stage
 
-FROM builder 
+FROM builder
 
 WORKDIR /weather_app
 

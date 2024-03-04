@@ -25,7 +25,7 @@ jobs:
       - run:
           name: Run Docker image and test
           command: |
-            sudo docker run --rm -d -p 80:80 --name weather_app $IMG_NAME
+            sudo docker run --rm -d -p 5000:5000 --name weather_app $IMG_NAME
             python3 --version
             python3 unitest.py
 
