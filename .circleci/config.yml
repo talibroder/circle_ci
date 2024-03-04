@@ -12,6 +12,9 @@ jobs:
 
     steps:
       - checkout
+      - run:
+         name: Print Project Directory Contents
+         command: ls -al /home/circleci/project
 
       - run:
           name: Build Docker image
